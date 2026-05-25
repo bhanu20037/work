@@ -319,7 +319,7 @@ function addMsg(role,text,isLoad){
 }
 
 /* Gemini models to try in order — fallback if one hits quota */
-const MODELS=['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-1.0-pro'];
+const MODELS=['gemini-2.0-flash-lite','gemini-2.0-flash','gemini-1.5-flash-latest','gemini-1.5-pro-latest'];
 
 async function callGemini(text, modelIndex=0){
   if(modelIndex>=MODELS.length) return {error:'All models quota exceeded. Please create a new API key at aistudio.google.com/apikey'};

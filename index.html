@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bhanu Search Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#03030a;--s1:#08081a;--s2:#0f0f24;
+  --b1:rgba(255,255,255,0.05);--b2:rgba(255,255,255,0.10);
+  --a1:#4285f4;--a2:#34a853;--a3:#ea4335;--a4:#fbbc05;
+  --gold:#ffc947;--green:#00e5a0;
+  --txt:#eeeef8;--mut:#5a5a80;--mut2:#3a3a58;
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Syne',sans-serif;overflow:hidden;cursor:none;}
+#cursor{position:fixed;width:12px;height:12px;border-radius:50%;background:var(--a1);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .2s,height .2s,background .2s;mix-blend-mode:screen;}
+#cursor-ring{position:fixed;width:36px;height:36px;border-radius:50%;border:1px solid rgba(66,133,244,0.5);pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .3s,height .3s,opacity .3s;}
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.6;}
+.app{position:relative;z-index:2;display:flex;flex-direction:column;height:100vh;max-width:860px;margin:0 auto;}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--b1);background:rgba(3,3,10,0.75);backdrop-filter:blur(20px);flex-shrink:0;animation:headerIn .8s cubic-bezier(.22,1,.36,1) both;}
+@keyframes headerIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+.logo{display:flex;align-items:center;gap:14px;}
+.logo-gem{position:relative;width:46px;height:46px;animation:gemSpin 10s linear infinite;}
+@keyframes gemSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.logo-inner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;animation:gemSpin 10s linear infinite reverse;box-shadow:0 0 18px rgba(66,133,244,0.5);}
+.logo-words{display:flex;flex-direction:column;line-height:1.15;}
+.logo-name{font-size:22px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(90deg,#4285f4,#34a853,#fbbc05,#ea4335);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.logo-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;padding:4px 12px;border-radius:999px;letter-spacing:1px;}
+.badge-free{background:rgba(52,168,83,0.12);border:1px solid rgba(52,168,83,0.35);color:#34a853;animation:glow-green 2s ease-in-out infinite alternate;}
+@keyframes glow-green{from{box-shadow:0 0 4px rgba(52,168,83,0.2)}to{box-shadow:0 0 14px rgba(52,168,83,0.5)}}
+.badge-speed{background:rgba(251,188,5,0.1);border:1px solid rgba(251,188,5,0.3);color:var(--gold);}
+.live{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mut);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 1.8s infinite;}
+@keyframes livepulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+#new-btn{display:none;font-family:'Syne',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:8px;border:1px solid var(--b2);background:transparent;color:var(--mut);cursor:none;transition:all .2s;}
+#new-btn:hover{border-color:var(--a1);color:var(--a1);background:rgba(66,133,244,0.08);}
+#new-btn.show{display:block;}
+
+/* ── Modal ── */
+#api-modal{position:fixed;inset:0;z-index:100;background:rgba(3,3,10,0.97);backdrop-filter:blur(24px);display:flex;align-items:center;justify-content:center;animation:fadeIn .4s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-card{background:var(--s2);border:1px solid var(--b2);border-radius:20px;padding:36px 40px;max-width:520px;width:92%;text-align:center;animation:cardIn .5s cubic-bezier(.22,1,.36,1);box-shadow:0 0 80px rgba(66,133,244,0.12);}
+@keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-icon{font-size:44px;margin-bottom:16px;animation:floatAnim 3s ease-in-out infinite;}
+@keyframes floatAnim{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.modal-title{font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;background:linear-gradient(90deg,#4285f4,#34a853,#fbbc05,#ea4335);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.modal-subtitle{font-size:12px;color:var(--mut);margin-bottom:20px;font-family:'IBM Plex Mono',monospace;letter-spacing:1px;}
+
+.steps{text-align:left;margin-bottom:22px;display:flex;flex-direction:column;gap:9px;}
+.step{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:12px;transition:border-color .2s;}
+.step:hover{border-color:var(--b2);}
+.step-num{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px;}
+.n1{background:#4285f4;}.n2{background:#34a853;}.n3{background:#fbbc05;}.n4{background:#ea4335;}
+.step-txt{font-size:12px;color:var(--mut);line-height:1.65;}
+.step-txt strong{color:var(--txt);font-weight:600;}
+.step-txt a{color:#4285f4;text-decoration:none;font-weight:600;}
+.step-txt a:hover{text-decoration:underline;}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;margin-left:5px;vertical-align:middle;}
+.tag-free{background:rgba(52,168,83,0.12);border:1px solid rgba(52,168,83,0.3);color:#34a853;}
+.tag-important{background:rgba(251,188,5,0.12);border:1px solid rgba(251,188,5,0.3);color:#fbbc05;}
+
+.key-input-wrap{display:flex;gap:8px;margin-bottom:10px;background:var(--s1);border:1px solid var(--b2);border-radius:12px;padding:4px 4px 4px 14px;transition:border-color .2s,box-shadow .2s;}
+.key-input-wrap:focus-within{border-color:rgba(66,133,244,.5);box-shadow:0 0 0 3px rgba(66,133,244,.1);}
+#api-key-input{flex:1;background:transparent;border:none;outline:none;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--txt);letter-spacing:.5px;}
+#api-key-input::placeholder{color:var(--mut2);}
+#save-key-btn{padding:10px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#4285f4,#34a853);color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:none;transition:opacity .2s,transform .1s;white-space:nowrap;}
+#save-key-btn:hover{opacity:.85;}
+#save-key-btn:active{transform:scale(.97);}
+#key-error{font-size:11px;color:#ea4335;min-height:16px;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;display:none;}
+.modal-note{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mut2);letter-spacing:.5px;margin-top:10px;}
+
+/* ── Welcome ── */
+#welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;}
+#welcome.hidden{display:none;}
+.w-logo{width:90px;height:90px;margin:0 auto 28px;animation:floatAnim 4s ease-in-out infinite;}
+.w-title{font-size:48px;font-weight:800;letter-spacing:-2px;margin-bottom:8px;background:linear-gradient(90deg,#4285f4,#34a853,#fbbc05,#ea4335);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:titleIn 1s .2s cubic-bezier(.22,1,.36,1) both;}
+@keyframes titleIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.w-mono{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);margin-bottom:14px;animation:titleIn 1s .35s both;}
+.w-sub{font-size:14px;color:var(--mut);max-width:420px;line-height:1.8;margin-bottom:40px;animation:titleIn 1s .45s both;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:620px;animation:titleIn 1s .6s both;}
+.chip{padding:8px 16px;border-radius:999px;border:1px solid var(--b2);background:var(--s1);color:var(--mut);font-size:12px;font-weight:600;cursor:none;transition:all .2s;white-space:nowrap;}
+.chip:hover{border-color:var(--a1);color:var(--a1);background:rgba(66,133,244,.08);transform:translateY(-2px);box-shadow:0 4px 20px rgba(66,133,244,.15);}
+
+/* ── Chat ── */
+#chat{flex:1;overflow-y:auto;padding:24px 32px;display:flex;flex-direction:column;gap:20px;scroll-behavior:smooth;}
+#chat::-webkit-scrollbar{width:3px;}
+#chat::-webkit-scrollbar-thumb{background:var(--b2);border-radius:4px;}
+#chat.hidden{display:none;}
+.row{display:flex;gap:12px;align-items:flex-start;animation:msgIn .3s cubic-bezier(.22,1,.36,1);}
+@keyframes msgIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.row.u{flex-direction:row-reverse;}
+.av{width:34px;height:34px;border-radius:10px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.av.bot{background:linear-gradient(135deg,#4285f4,#34a853);box-shadow:0 0 16px rgba(66,133,244,.4);}
+.av.usr{background:var(--s2);border:1px solid var(--b2);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:10px;}
+.bub{max-width:75%;padding:13px 18px;font-size:14px;line-height:1.75;white-space:pre-wrap;word-break:break-word;}
+.bub.bot{background:var(--s1);border:1px solid var(--b1);border-radius:3px 16px 16px 16px;color:var(--txt);}
+.bub.usr{background:rgba(66,133,244,.1);border:1px solid rgba(66,133,244,.25);border-radius:16px 3px 16px 16px;color:#c8d8ff;}
+.dots{display:inline-flex;gap:5px;align-items:center;height:20px;}
+.dots span{width:7px;height:7px;border-radius:50%;animation:dotb 1.2s infinite;}
+.dots span:nth-child(1){background:#4285f4;}.dots span:nth-child(2){background:#34a853;animation-delay:.2s;}.dots span:nth-child(3){background:#fbbc05;animation-delay:.4s;}
+@keyframes dotb{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1);opacity:1}}
+
+/* ── Input ── */
+.ibar{flex-shrink:0;padding:14px 32px 22px;border-top:1px solid var(--b1);background:rgba(3,3,10,.75);backdrop-filter:blur(20px);}
+.iwrap{display:flex;align-items:flex-end;gap:10px;background:var(--s1);border:1px solid var(--b2);border-radius:18px;padding:10px 12px;transition:border-color .2s,box-shadow .2s;}
+.iwrap:focus-within{border-color:rgba(66,133,244,.5);box-shadow:0 0 0 4px rgba(66,133,244,.08);}
+#inp{flex:1;background:transparent;border:none;outline:none;resize:none;font-family:'Syne',sans-serif;font-size:14px;color:var(--txt);line-height:1.6;max-height:120px;overflow-y:auto;padding:2px 0;}
+#inp::placeholder{color:var(--mut2);}
+#sbtn{width:40px;height:40px;border-radius:12px;border:none;background:linear-gradient(135deg,#4285f4,#34a853);color:#fff;cursor:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s,transform .1s;box-shadow:0 0 20px rgba(66,133,244,.35);}
+#sbtn:hover{opacity:.8;}#sbtn:active{transform:scale(.93);}#sbtn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none;}
+.hint{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mut2);margin-top:9px;letter-spacing:.5px;}
+.hint kbd{padding:1px 5px;background:var(--s2);border:1px solid var(--b2);border-radius:4px;font-size:9px;}
+
+.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:1;animation:particleFly linear infinite;}
+@keyframes particleFly{0%{transform:translateY(100vh) translateX(0) scale(0);opacity:0}10%{opacity:.8}90%{opacity:.4}100%{transform:translateY(-10vh) translateX(var(--drift)) scale(1.2);opacity:0}}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="bg-canvas"></canvas>
+
+<!-- Modal -->
+<div id="api-modal">
+  <div class="modal-card">
+    <div class="modal-icon">💎</div>
+    <h2 class="modal-title">Connect Google Gemini</h2>
+    <p class="modal-subtitle">FREE FOREVER · NO CREDIT CARD · 1500 REQUESTS/DAY</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num n1">1</div>
+        <div class="step-txt">Go to <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> — sign in with your <strong>personal Gmail</strong> (not work/school).</div>
+      </div>
+      <div class="step">
+        <div class="step-num n2">2</div>
+        <div class="step-txt">Click <strong>"Create API key"</strong> → then click <strong>"Create API key in new project"</strong> <span class="tag tag-important">IMPORTANT</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num n3">3</div>
+        <div class="step-txt">Copy the key that appears. It starts with <strong>AIzaSy...</strong> <span class="tag tag-free">FREE</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num n4">4</div>
+        <div class="step-txt">Paste it below and click <strong>Launch.</strong> Key saves in your browser — works every time you open the site.</div>
+      </div>
+    </div>
+    <div id="key-error"></div>
+    <div class="key-input-wrap">
+      <input id="api-key-input" type="password" placeholder="AIzaSy..." autocomplete="off" spellcheck="false"/>
+      <button id="save-key-btn" onclick="saveKey()">Launch 💎</button>
+    </div>
+    <p class="modal-note">KEY SAVED IN YOUR BROWSER ONLY · NEVER SHARED · PRESS Ctrl+K TO CHANGE</p>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app" id="app" style="display:none;">
+  <header>
+    <div class="logo">
+      <div class="logo-gem">
+        <svg width="46" height="46" viewBox="0 0 46 46" fill="none">
+          <defs><linearGradient id="rg1" x1="0" y1="0" x2="46" y2="46" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#4285f4"/><stop offset="33%" stop-color="#34a853"/><stop offset="66%" stop-color="#fbbc05"/><stop offset="100%" stop-color="#ea4335"/></linearGradient></defs>
+          <circle cx="23" cy="23" r="21" stroke="url(#rg1)" stroke-width="1.2" stroke-dasharray="5 3" fill="none" opacity=".7"/>
+        </svg>
+        <div class="logo-inner">B</div>
+      </div>
+      <div class="logo-words">
+        <span class="logo-name">Bhanu</span>
+        <span class="logo-tag">Search Engine · Gemini</span>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="badge badge-free">✦ FREE</div>
+      <div class="badge badge-speed">⚡ FAST</div>
+      <button id="new-btn" onclick="newChat()">↺ New Search</button>
+      <div class="live"><div class="live-dot"></div>LIVE</div>
+    </div>
+  </header>
+
+  <div id="welcome">
+    <div class="w-logo">
+      <svg viewBox="0 0 90 90" fill="none" width="90" height="90">
+        <defs>
+          <linearGradient id="wg1" x1="0" y1="0" x2="90" y2="90" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#4285f4"/><stop offset="33%" stop-color="#34a853"/><stop offset="66%" stop-color="#fbbc05"/><stop offset="100%" stop-color="#ea4335"/></linearGradient>
+        </defs>
+        <circle cx="45" cy="45" r="42" stroke="url(#wg1)" stroke-width="1.5" stroke-dasharray="7 4" fill="rgba(66,133,244,0.05)"/>
+        <circle cx="40" cy="40" r="18" stroke="url(#wg1)" stroke-width="2.5" fill="rgba(66,133,244,0.1)"/>
+        <line x1="53" y1="53" x2="67" y2="67" stroke="#fbbc05" stroke-width="4.5" stroke-linecap="round"/>
+        <text x="32" y="46" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#fbbc05">B</text>
+        <circle cx="72" cy="20" r="3.5" fill="#4285f4" opacity=".8"/>
+        <circle cx="15" cy="70" r="2.5" fill="#34a853" opacity=".7"/>
+        <circle cx="75" cy="60" r="2" fill="#fbbc05" opacity=".8"/>
+        <circle cx="22" cy="22" r="1.5" fill="#ea4335" opacity=".6"/>
+      </svg>
+    </div>
+    <p class="w-mono">💎 Powered by Google Gemini · Free</p>
+    <h1 class="w-title">Bhanu Search</h1>
+    <p class="w-sub">Your personal AI search engine — 100% free forever. Ask anything and get sharp, instant answers.</p>
+    <div class="chips">
+      <div class="chip" onclick="fill('What is quantum computing?')">⚛ Quantum computing</div>
+      <div class="chip" onclick="fill('How does the internet work?')">🌐 How internet works</div>
+      <div class="chip" onclick="fill('Difference between AI and Machine Learning')">🤖 AI vs ML</div>
+      <div class="chip" onclick="fill('How to make pasta from scratch?')">🍝 Make pasta</div>
+      <div class="chip" onclick="fill('What is the speed of light?')">💡 Speed of light</div>
+      <div class="chip" onclick="fill('Why is the sky blue?')">🌤 Why sky is blue</div>
+      <div class="chip" onclick="fill('Best programming languages to learn in 2025')">💻 Learn coding</div>
+      <div class="chip" onclick="fill('How does the human brain work?')">🧠 Human brain</div>
+      <div class="chip" onclick="fill('What is a black hole?')">🕳 Black holes</div>
+      <div class="chip" onclick="fill('How to improve memory and focus?')">💡 Improve memory</div>
+    </div>
+  </div>
+
+  <div id="chat" class="hidden"></div>
+
+  <div class="ibar">
+    <div class="iwrap">
+      <textarea id="inp" rows="1" placeholder="Ask Bhanu anything..."></textarea>
+      <button id="sbtn" onclick="send()" aria-label="Search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <p class="hint"><kbd>Enter</kbd> to search &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> new line &nbsp;·&nbsp; <kbd>Ctrl+K</kbd> change key</p>
+  </div>
+</div>
+
+<script>
+/* ── Cursor ── */
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+(function animRing(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(animRing);})();
+document.querySelectorAll('button,a,.chip,#inp,#api-key-input').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.width='20px';cur.style.height='20px';cur.style.background='#34a853';ring.style.width='50px';ring.style.height='50px';ring.style.opacity='.5';});
+  el.addEventListener('mouseleave',()=>{cur.style.width='12px';cur.style.height='12px';cur.style.background='var(--a1)';ring.style.width='36px';ring.style.height='36px';ring.style.opacity='1';});
+});
+
+/* ── Canvas ── */
+const canvas=document.getElementById('bg-canvas'),ctx=canvas.getContext('2d');
+let W,H,nodes=[];
+const gcols=['rgba(66,133,244,','rgba(52,168,83,','rgba(251,188,5,','rgba(234,67,53,'];
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;initNodes();}
+function initNodes(){nodes=[];const n=Math.floor((W*H)/18000);for(let i=0;i<n;i++)nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*2+1,c:gcols[Math.floor(Math.random()*4)]});}
+function drawBG(){
+  ctx.clearRect(0,0,W,H);
+  for(let i=0;i<nodes.length;i++){
+    const a=nodes[i];a.x+=a.vx;a.y+=a.vy;
+    if(a.x<0||a.x>W)a.vx*=-1;if(a.y<0||a.y>H)a.vy*=-1;
+    for(let j=i+1;j<nodes.length;j++){
+      const b=nodes[j],d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d<120){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=`rgba(66,133,244,${(1-d/120)*.15})`;ctx.lineWidth=.6;ctx.stroke();}
+    }
+    ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,Math.PI*2);ctx.fillStyle=a.c+'0.55)';ctx.fill();
+  }
+  requestAnimationFrame(drawBG);
+}
+window.addEventListener('resize',resize);resize();drawBG();
+
+/* ── Particles ── */
+function spawnParticle(){
+  const p=document.createElement('div');p.className='particle';
+  const colors=['rgba(66,133,244,.5)','rgba(52,168,83,.5)','rgba(251,188,5,.4)','rgba(234,67,53,.4)'];
+  p.style.cssText=`width:${Math.random()*4+2}px;height:${Math.random()*4+2}px;left:${Math.random()*100}vw;bottom:-10px;background:${colors[Math.floor(Math.random()*4)]};--drift:${(Math.random()-.5)*200}px;animation-duration:${6+Math.random()*8}s;animation-delay:${Math.random()*4}s;`;
+  document.body.appendChild(p);setTimeout(()=>p.remove(),(14+Math.random()*8)*1000);
+}
+setInterval(spawnParticle,600);
+
+/* ── Key ── */
+const STORE='bhanu_gemini_v2';
+let apiKey='';
+
+function showError(msg){const e=document.getElementById('key-error');e.textContent=msg;e.style.display='block';}
+function hideError(){document.getElementById('key-error').style.display='none';}
+
+function saveKey(){
+  const val=document.getElementById('api-key-input').value.trim();
+  if(!val){showError('⚠ Please paste your API key first.');return;}
+  if(!val.startsWith('AIza')){showError('⚠ Invalid key. Gemini keys start with AIzaSy... — get one from aistudio.google.com/apikey');return;}
+  hideError();
+  localStorage.setItem(STORE,val);
+  apiKey=val;
+  document.getElementById('api-modal').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('inp').focus();
+}
+
+function checkKey(){
+  const k=localStorage.getItem(STORE);
+  if(k){apiKey=k;document.getElementById('api-modal').style.display='none';document.getElementById('app').style.display='flex';document.getElementById('inp').focus();}
+}
+
+document.getElementById('api-key-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveKey();});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){localStorage.removeItem(STORE);location.reload();}});
+
+/* ── Chat ── */
+const welcomeEl=document.getElementById('welcome'),chatEl=document.getElementById('chat');
+const inpEl=document.getElementById('inp'),sbtnEl=document.getElementById('sbtn'),newBtn=document.getElementById('new-btn');
+let started=false,loading=false;
+
+inpEl.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+inpEl.addEventListener('input',()=>{inpEl.style.height='auto';inpEl.style.height=Math.min(inpEl.scrollHeight,120)+'px';});
+function fill(t){inpEl.value=t;inpEl.focus();send();}
+function showChat(){if(!started){welcomeEl.classList.add('hidden');chatEl.classList.remove('hidden');newBtn.classList.add('show');started=true;}}
+function newChat(){chatEl.innerHTML='';chatEl.classList.add('hidden');welcomeEl.classList.remove('hidden');newBtn.classList.remove('show');inpEl.value='';inpEl.style.height='auto';started=false;loading=false;sbtnEl.disabled=false;}
+
+function addMsg(role,text,isLoad){
+  const row=document.createElement('div');row.className='row'+(role==='u'?' u':'');
+  const av=document.createElement('div');av.className='av '+(role==='u'?'usr':'bot');av.textContent=role==='u'?'YOU':'B';
+  const bub=document.createElement('div');bub.className='bub '+(role==='u'?'usr':'bot');
+  if(isLoad)bub.innerHTML='<div class="dots"><span></span><span></span><span></span></div>';
+  else bub.textContent=text;
+  row.appendChild(av);row.appendChild(bub);chatEl.appendChild(row);chatEl.scrollTop=chatEl.scrollHeight;
+  return bub;
+}
+
+/* Gemini models to try in order — fallback if one hits quota */
+const MODELS=['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-1.0-pro'];
+
+async function callGemini(text, modelIndex=0){
+  if(modelIndex>=MODELS.length) return {error:'All models quota exceeded. Please create a new API key at aistudio.google.com/apikey'};
+  const model=MODELS[modelIndex];
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const res=await fetch(url,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      system_instruction:{parts:[{text:`You are Bhanu Search Engine — the fastest, most precise AI assistant. Answer with surgical accuracy.
+RULES:
+- First sentence IS the answer. No preamble, no filler, no "Great question".
+- Facts: answer then one line of context. Done.
+- How-to: short numbered steps, plain text.
+- Comparisons: verdict first, 2-3 lines max.
+- Definitions: one crisp sentence plus one example if helpful.
+- SHORT and HIGH DENSITY. Zero wasted words.
+- Plain text only. No **, no #, no bullet dashes. Line breaks for structure only.
+- Harmful or illegal: one-sentence decline only.`}]},
+      contents:[{parts:[{text}]}],
+      generationConfig:{maxOutputTokens:800,temperature:0.5}
+    })
+  });
+  const data=await res.json();
+  /* If quota hit, try next model */
+  if(data.error && data.error.message && data.error.message.includes('quota')){
+    return callGemini(text, modelIndex+1);
+  }
+  if(data.error) return {error: data.error.message};
+  return {reply: data.candidates?.[0]?.content?.parts?.[0]?.text || 'No answer received.'};
+}
+
+async function send(){
+  const text=inpEl.value.trim();
+  if(!text||loading)return;
+  loading=true;sbtnEl.disabled=true;
+  inpEl.value='';inpEl.style.height='auto';
+  showChat();addMsg('u',text);
+  const bot=addMsg('b','',true);
+  try{
+    const result=await callGemini(text);
+    bot.innerHTML='';
+    if(result.error){
+      bot.textContent='Error: '+result.error+' Press Ctrl+K to update your key.';
+    } else {
+      bot.textContent=result.reply;
+    }
+  }catch(e){
+    bot.innerHTML='';bot.textContent='Connection error. Check your internet and try again.';
+  }
+  loading=false;sbtnEl.disabled=false;chatEl.scrollTop=chatEl.scrollHeight;
+}
+
+checkKey();
+</script>
+</body>
+</html>
